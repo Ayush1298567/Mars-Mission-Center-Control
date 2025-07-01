@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Mission Control Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ff88;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        .mission-status {
+            display: inline-block;
+            background: #ff4444;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 10px #00ff88; }
+            50% { text-shadow: 0 0 20px #00ff88, 0 0 30px #00ff88; }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .panel h2 {
+            color: #ffaa00;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .mars-viewer {
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .control-info {
+            font-size: 0.9em;
+            color: #ffaa00;
+        }
+
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid #00ff88;
+            background: #000;
+            cursor: grab;
+        }
+
+        .map-container:active {
+            cursor: grabbing;
+        }
+
+        .mars-surface {
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            top: -100%;
+            left: -100%;
+            background: 
+                /* Realistic Mars surface texture */
+                radial-gradient(circle at 15% 25%, rgba(139, 69, 19, 0.8) 2px, transparent 4px),
+                radial-gradient(circle at 85% 15%, rgba(160, 82, 45, 0.6) 3px, transparent 6px),
+                radial-gradient(circle at 45% 75%, rgba(139, 69, 19, 0.4) 1px, transparent 3px),
+                /* Large crater formations */
+                radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.6) 50px, rgba(139, 69, 19, 0.3) 55px, transparent 60px),
+                radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.5) 30px, rgba(160, 82, 45, 0.3) 35px, transparent 40px),
+                radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.4) 25px, rgba(139, 69, 19, 0.2) 30px, transparent 35px),
+                /* Base Mars color with realistic variations */
+                linear-gradient(135deg, #cd853f 0%, #a0522d 25%, #8b4513 50%, #daa520 75%, #cd853f 100%),
+                linear-gradient(45deg, rgba(139, 69, 19, 0.3) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(205, 133, 63, 0.2) 25%, transparent 25%);
+            background-size: 
+                20px 20px, 25px 25px, 15px 15px,
+                200px 200px, 150px 150px, 120px 120px,
+                100% 100%, 30px 30px, 40px 40px;
+            transition: transform 0.1s ease-out;
+            transform-origin: center center;
+        }
+
+        .rover {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            transition: all 0.2s ease;
+        }
+
+        .rover-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #e6e6e6, #999999);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(230, 230, 230, 0.6);
+            border: 2px solid #cccccc;
+        }
+
+        .rover-wheels {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .wheel {
+            position: absolute;
+            width: 10px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            border: 1px solid #555;
+        }
+
+        .wheel-fl { top: 8px; left: -3px; }
+        .wheel-fr { top: 8px; right: -3px; }
+        .wheel-bl { bottom: 8px; left: -3px; }
+        .wheel-br { bottom: 8px; right: -3px; }
+
+        .rover-mast {
+            position: absolute;
+            width: 3px;
+            height: 15px;
+            background: #666;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .rover-camera {
+            position: absolute;
+            width: 8px;
+            height: 6px;
+            background: #000;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .solar-panels {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: linear-gradient(90deg, #1a1a2e, #16213e);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 3px;
+            opacity: 0.9;
+            z-index: -1;
+            border: 1px solid #333;
+        }
+
+        .landmark {
+            position: absolute;
+            cursor: pointer;
+            z-index: 150;
+            transition: all 0.3s ease;
+        }
+
+        .landmark-icon {
+            font-size: 28px;
+            text-align: center;
+            filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.8));
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .landmark:hover .landmark-icon {
+            transform: scale(1.3);
+            animation: none;
+        }
+
+        .landmark-label {
+            position: absolute;
+            top: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #ffaa00;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            border: 2px solid #ffaa00;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+
+        .landmark:hover .landmark-label {
+            opacity: 1;
+        }
+
+        .discovery-point {
+            position: absolute;
+            cursor: pointer;
+            z-index: 180;
+            font-size: 20px;
+            animation: discovery-pulse 2s infinite;
+        }
+
+        @keyframes discovery-pulse {
+            0%, 100% { 
+                transform: scale(1) rotate(0deg); 
+                filter: drop-shadow(0 0 5px yellow);
+            }
+            50% { 
+                transform: scale(1.4) rotate(180deg); 
+                filter: drop-shadow(0 0 15px yellow);
+            }
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 300;
+        }
+
+        .map-btn {
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            color: #00ff88;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .coordinates {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff88;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #00ff88;
+            z-index: 300;
+        }
+
+        .zoom-level {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffaa00;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            border: 1px solid #ffaa00;
+            z-index: 300;
+        }
+
+        .mission-progress {
+            background: rgba(0, 100, 200, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #0066cc;
+        }
+
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            width: 120px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ffaa00);
+            transition: width 0.8s ease;
+            border-radius: 5px;
+        }
+
+        .highlight {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 12px;
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .special-btn {
+            background: linear-gradient(45deg, #00ff88, #00cc66);
+        }
+
+        .special-btn:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        }
+
+        .special-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+            transform: none;
+        }
+
+        .objectives-panel h3 {
+            color: #ffaa00;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .objective {
+            margin: 8px 0;
+            padding: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .objective:hover {
+            background: rgba(255, 170, 0, 0.1);
+            border-color: #ffaa00;
+        }
+
+        .objective.completed {
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            border-color: #00ff88;
+        }
+
+        .weather-data {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .weather-item {
+            background: rgba(0, 100, 200, 0.2);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #0066cc;
+            transition: all 0.3s ease;
+        }
+
+        .weather-item:hover {
+            background: rgba(0, 100, 200, 0.3);
+            transform: scale(1.05);
+        }
+
+        .weather-value {
+            font-size: 1.6em;
+            color: #ffaa00;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .mission-timeline {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .timeline-item {
+            background: rgba(50, 50, 50, 0.6);
+            margin: 8px 0;
+            padding: 12px;
+            border-left: 4px solid #00ff88;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .timeline-item:hover {
+            background: rgba(50, 50, 50, 0.8);
+            transform: translateX(5px);
+        }
+
+        .timeline-date {
+            color: #ffaa00;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .data-stream {
+            height: 280px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            border: 1px solid #333;
+        }
+
+        .log-entry {
+            margin: 3px 0;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+            padding: 2px 0;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .critical { color: #ff4444; font-weight: bold; }
+        .warning { color: #ffaa00; }
+        .success { color: #00ff88; }
+
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .mars-viewer {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 MARS MISSION CONTROL CENTER 🚀</h1>
+        <div class="mission-status" id="missionStatus">MISSION ACTIVE</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="main-panel">
+            <div class="panel mars-viewer">
+                <div class="map-controls-header">
+                    <h2>🔴 INTERACTIVE MARS SURFACE EXPLORATION</h2>
+                    <div class="control-info">
+                        Use WASD keys to navigate • Mouse wheel to zoom • Click landmarks to explore
+                    </div>
+                </div>
+                
+                <div class="map-container" id="mapContainer">
+                    <div class="mars-surface" id="marsSurface">
+                        <!-- Realistic Perseverance Rover -->
+                        <div class="rover" id="rover">
+                            <div class="rover-body">
+                                <div class="rover-wheels">
+                                    <div class="wheel wheel-fl"></div>
+                                    <div class="wheel wheel-fr"></div>
+                                    <div class="wheel wheel-bl"></div>
+                                    <div class="wheel wheel-br"></div>
+                                </div>
+                                <div class="rover-mast"></div>
+                                <div class="rover-camera"></div>
+                                <div class="solar-panels"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Interactive Mars Landmarks -->
+                        <div class="landmark" style="top: 25%; left: 35%;" onclick="exploreLandmark('Jezero Crater')" data-mission="primary">
+                            <div class="landmark-icon">🌋</div>
+                            <div class="landmark-label">Jezero Crater<br><small>Ancient Lake Bed • Primary Target</small></div>
+                        </div>
+                        
+                        <div class="landmark" style="top: 45%; left: 70%;" onclick="exploreLandmark('Bright Angel')" data-mission="secondary">
+                            <div class="landmark-icon">⛰️</div>
+                            <div class="landmark-label">Bright Angel<br><small>Rock Formation • Sample Site</small></div>
+                        </div>
+                        
+                        <div class="landmark" style="top: 15%; left: 60%;" onclick="exploreLandmark('River Delta')" data-mission="primary">
+                            <div class="landmark-icon">🏞️</div>
+                            <div class="landmark-label">Ancient River Delta<br><small>Water Evidence • High Priority</small></div>
+                        </div>
+                        
+                        <div class="landmark" style="top: 65%; left: 25%;" onclick="exploreLandmark('Sample Site Alpha')" data-mission="drill">
+                            <div class="landmark-icon">🧪</div>
+                            <div class="landmark-label">Drill Site Alpha<br><small>Subsurface Analysis Target</small></div>
+                        </div>
+                        
+                        <div class="landmark" style="top: 75%; left: 80%;" onclick="exploreLandmark('Weather Station')" data-mission="support">
+                            <div class="landmark-icon">📡</div>
+                            <div class="landmark-label">Communications Relay<br><small>Data Transmission Hub</small></div>
+                        </div>
+                        
+                        <!-- Scientific Discovery Points -->
+                        <div class="discovery-point" style="top: 35%; left: 50%;" onclick="makeDiscovery('Organic Compounds')" title="Biosignature Detection Site">
+                            ✨
+                        </div>
+                        <div class="discovery-point" style="top: 55%; left: 45%;" onclick="makeDiscovery('Water Evidence')" title="Hydrated Mineral Formation">
+                            💧
+                        </div>
+                        <div class="discovery-point" style="top: 40%; left: 30%;" onclick="makeDiscovery('Rare Minerals')" title="Unusual Geological Formation">
+                            💎
+                        </div>
+                    </div>
+                    
+                    <!-- Map Interface Elements -->
+                    <div class="coordinates" id="coordinates">
+                        Lat: 18.4447°N, Lon: 77.4508°E
+                    </div>
+                    
+                    <div class="map-controls">
+                        <button class="map-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                        <button class="map-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+                        <button class="map-btn" onclick="centerOnRover()" title="Center on Rover">🎯</button>
+                        <button class="map-btn" onclick="toggleMissions()" title="Toggle Mission Markers">📍</button>
+                    </div>
+                    
+                    <div class="zoom-level" id="zoomLevel">
+                        Zoom: 100%
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📡 REAL-TIME DATA STREAM</h2>
+                <div class="data-stream" id="dataStream">
+                    <div class="log-entry success">MARS MISSION CONTROL SYSTEM ONLINE - All systems nominal</div>
+                    <div class="log-entry">Perseverance rover telemetry link established</div>
+                    <div class="log-entry">Weather monitoring systems active</div>
+                    <div class="log-entry warning">Solar panel efficiency: 92% - Dust accumulation detected</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel">
+                <h2>🎮 ROVER MISSION CONTROLS</h2>
+                <div class="mission-progress">
+                    <div class="progress-item">
+                        <span>Mission Progress:</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="missionProgress" style="width: 15%"></div>
+                        </div>
+                        <span id="progressText" class="highlight">15%</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Samples Collected:</span>
+                        <span id="samplesCount" class="highlight">0/5</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Distance Traveled:</span>
+                        <span id="distanceTraveled" class="highlight">0.00 km</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Scientific Discoveries:</span>
+                        <span id="discoveriesCount" class="highlight">0/3</span>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="control-btn" onclick="moveRover('NORTH')">⬆️ MOVE NORTH</button>
+                    <button class="control-btn" onclick="moveRover('SOUTH')">⬇️ MOVE SOUTH</button>
+                    <button class="control-btn" onclick="moveRover('WEST')">⬅️ MOVE WEST</button>
+                    <button class="control-btn" onclick="moveRover('EAST')">➡️ MOVE EAST</button>
+                    <button class="control-btn special-btn" onclick="drillSample()" id="drillBtn">🔧 DRILL SAMPLE</button>
+                    <button class="control-btn special-btn" onclick="takePhoto()">📸 CAPTURE IMAGE</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🌡️ MARS ENVIRONMENTAL DATA</h2>
+                <div class="weather-data">
+                    <div class="weather-item">
+                        <div>Temperature</div>
+                        <div class="weather-value" id="temperature">-73°C</div>
+                    </div>
+                    <div class="weather-item">
+                        <div>Pressure</div>
+                        <div class="weather-value" id="pressure">687 Pa</div>
+                    </div>
+                    <div class="weather-item">
+                        <div>Wind Speed</div>
+                        <div class="weather-value" id="windSpeed">18 m/s</div>
+                    </div>
+                    <div class="weather-item">
+                        <div>Sol (Mars Day)</div>
+                        <div class="weather-value" id="sol">4162</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🎯 MISSION OBJECTIVES</h2>
+                <div class="objectives-panel">
+                    <div class="objective" id="obj1">❌ Navigate to and analyze Jezero Crater formation</div>
+                    <div class="objective" id="obj2">❌ Collect geological samples from 5 different locations (0/5)</div>
+                    <div class="objective" id="obj3">❌ Document surface features with high-resolution imaging</div>
+                    <div class="objective" id="obj4">❌ Discover evidence of past or present life on Mars</div>
+                    <div class="objective" id="obj5">❌ Establish communication relay network</div>
+                    <div class="objective" id="obj6">❌ Complete comprehensive atmospheric analysis</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📋 MISSION TIMELINE</h2>
+                <div class="mission-timeline">
+                    <div class="timeline-item" onclick="viewTimelineDetail('sol4162')">
+                        <div class="timeline-date">SOL 4162 - Today</div>
+                        <div>Active exploration mission - Perseverance conducting surface analysis</div>
+                    </div>
+                    <div class="timeline-item" onclick="viewTimelineDetail('sol4161')">
+                        <div class="timeline-date">SOL 4161</div>
+                        <div>Ingenuity helicopter completed 74th flight - Aerial reconnaissance</div>
+                    </div>
+                    <div class="timeline-item" onclick="viewTimelineDetail('sol4160')">
+                        <div class="timeline-date">SOL 4160</div>
+                        <div>Rock sample analysis from Bright Angel formation completed</div>
+                    </div>
+                    <div class="timeline-item" onclick="viewTimelineDetail('sol4159')">
+                        <div class="timeline-date">SOL 4159</div>
+                        <div>Communications relay established with Mars Reconnaissance Orbiter</div>
+                    </div>
+                    <div class="timeline-item" onclick="viewTimelineDetail('sol4158')">
+                        <div class="timeline-date">SOL 4158</div>
+                        <div>MOXIE oxygen generation experiment - 12g oxygen produced</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced game state with comprehensive tracking
+        let gameState = {
+            samplesCollected: 0,
+            distanceTraveled: 0,
+            missionProgress: 15,
+            completedObjectives: [],
+            roverPosition: { x: 0, y: 0 },
+            discoveries: [],
+            currentZoom: 1,
+            mapOffset: { x: 0, y: 0 },
+            missionMarkersVisible: true,
+            totalDiscoveries: 0,
+            roverSpeed: 0.5,
+            isMoving: false
+        };
+
+        // Mars coordinates (Jezero Crater)
+        const marsCoordinates = {
+            baseLat: 18.4447,
+            baseLon: 77.4508
+        };
+
+        // Keyboard movement system
+        let keysPressed = {};
+        let moveInterval = null;
+
+        document.addEventListener('keydown', function(e) {
+            const key = e.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+                e.preventDefault();
+                if (!keysPressed[key]) {
+                    keysPressed[key] = true;
+                    startMovement();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            const key = e.key.toLowerCase();
+            keysPressed[key] = false;
+            if (!Object.values(keysPressed).some(pressed => pressed)) {
+                stopMovement();
+            }
+        });
+
+        // Mouse wheel zoom
+        document.getElementById('mapContainer').addEventListener('wheel', function(e) {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                zoomIn();
+            } else {
+                zoomOut();
+            }
+        });
+
+        function startMovement() {
+            if (moveInterval) return;
+            
+            moveInterval = setInterval(() => {
+                let moved = false;
+                let direction = '';
+                
+                if (keysPressed['w'] || keysPressed['arrowup']) {
+                    moveRoverRealistic('NORTH');
+                    direction = 'NORTH';
+                    moved = true;
+                }
+                if (keysPressed['s'] || keysPressed['arrowdown']) {
+                    moveRoverRealistic('SOUTH');
+                    direction = 'SOUTH';
+                    moved = true;
+                }
+                if (keysPressed['a'] || keysPressed['arrowleft']) {
+                    moveRoverRealistic('WEST');
+                    direction = 'WEST';
+                    moved = true;
+                }
+                if (keysPressed['d'] || keysPressed['arrowright']) {
+                    moveRoverRealistic('EAST');
+                    direction = 'EAST';
+                    moved = true;
+                }
+                
+                if (moved) {
+                    gameState.isMoving = true;
+                    updateCoordinates();
+                    animateRoverWheels();
+                    
+                    // Add occasional movement logs
+                    if (Math.random() > 0.85) {
+                        addLogEntry(`Rover navigating ${direction} at ${gameState.roverSpeed} m/s across Martian terrain`, '');
+                    }
+                }
+            }, 50); // Smooth 20fps movement
+        }
+
+        function stopMovement() {
+            if (moveInterval) {
+                clearInterval(moveInterval);
+                moveInterval = null;
+                gameState.isMoving = false;
+            }
+        }
+
+        // Realistic rover movement with proper zoom handling
+        function moveRoverRealistic(direction) {
+            const surface = document.getElementById('marsSurface');
+            const moveSpeed = 3; // pixels per movement
+            
+            let newX = gameState.mapOffset.x;
+            let newY = gameState.mapOffset.y;
+            
+            switch(direction) {
+                case 'NORTH':
+                    newY += moveSpeed;
+                    break;
+                case 'SOUTH':
+                    newY -= moveSpeed;
+                    break;
+                case 'WEST':
+                    newX += moveSpeed;
+                    break;
+                case 'EAST':
+                    newX -= moveSpeed;
+                    break;
+            }
+            
+            // Boundary limits for exploration area
+            const maxOffset = 400;
+            newX = Math.max(-maxOffset, Math.min(maxOffset, newX));
+            newY = Math.max(-maxOffset, Math.min(maxOffset, newY));
+            
+            gameState.mapOffset = { x: newX, y: newY };
+            gameState.distanceTraveled += moveSpeed * 0.002; // Convert to km
+            
+            // Apply transform with current zoom
+            updateMapTransform();
+            
+            // Update UI
+            document.getElementById('distanceTraveled').textContent = gameState.distanceTraveled.toFixed(2) + ' km';
+        }
+
+        // Fixed zoom functionality
+        function zoomIn() {
+            gameState.currentZoom = Math.min(3.0, gameState.currentZoom + 0.2);
+            updateMapTransform();
+            updateZoomDisplay();
+            addLogEntry(`Map zoom increased to ${Math.round(gameState.currentZoom * 100)}%`, '');
+        }
+
+        function zoomOut() {
+            gameState.currentZoom = Math.max(0.5, gameState.currentZoom - 0.2);
+            updateMapTransform();
+            updateZoomDisplay();
+            addLogEntry(`Map zoom decreased to ${Math.round(gameState.currentZoom * 100)}%`, '');
+        }
+
+        function updateMapTransform() {
+            const surface = document.getElementById('marsSurface');
+            surface.style.transform = `translate(${gameState.mapOffset.x}px, ${gameState.mapOffset.y}px) scale(${gameState.currentZoom})`;
+        }
+
+        function updateZoomDisplay() {
+            document.getElementById('zoomLevel').textContent = `Zoom: ${Math.round(gameState.currentZoom * 100)}%`;
+        }
+
+        function centerOnRover() {
+            gameState.mapOffset = { x: 0, y: 0 };
+            updateMapTransform();
+            addLogEntry('Map view centered on rover position - Navigation reset', 'success');
+        }
+
+        function toggleMissions() {
+            gameState.missionMarkersVisible = !gameState.missionMarkersVisible;
+            const landmarks = document.querySelectorAll('.landmark');
+            landmarks.forEach(landmark => {
+                landmark.style.opacity = gameState.missionMarkersVisible ? '1' : '0.3';
+            });
+            addLogEntry(`Mission markers ${gameState.missionMarkersVisible ? 'enabled' : 'disabled'}`, '');
+        }
+
+        // Enhanced landmark exploration with missions
+        function exploreLandmark(landmarkName) {
+            const landmarkData = {
+                'Jezero Crater': {
+                    message: 'Analyzing 45km-diameter impact crater - Ancient lake bed with preserved delta formations',
+                    scientific: 'Age: 3.5 billion years | Depth: 500m | Sediment layers indicate 100+ million years of water activity',
+                    mission: 'Primary exploration target - High probability of finding biosignatures in sedimentary deposits',
+                    objective: 'crater'
+                },
+                'Bright Angel': {
+                    message: 'Investigating light-toned carbonate rock formation - Layered sedimentary structure detected',
+                    scientific: 'Composition: Calcium carbonate with sulfate minerals | Formation: Aqueous precipitation',
+                    mission: 'Secondary sampling site - Potential preservation of organic compounds in carbonate matrix',
+                    objective: null
+                },
+                'River Delta': {
+                    message: 'Examining preserved ancient river delta system - Clear fan-shaped sediment deposits',
+                    scientific: 'Delta fan extent: 8km diameter | Deposition period: 500 million years | Clay mineral content: 15%',
+                    mission: 'Critical water evidence site - Confirms sustained liquid water presence',
+                    objective: 'water'
+                },
+                'Sample Site Alpha': {
+                    message: 'Prime subsurface drilling location identified - Optimal bedrock access for deep sampling',
+                    scientific: 'Drill penetration capability: 6cm depth | Rock hardness: 3.2 GPa | Minimal dust contamination',
+                    mission: 'Drilling operation authorized - Target subsurface mineral analysis',
+                    objective: 'sampling'
+                },
+                'Weather Station': {
+                    message: 'Communications relay station operational - Real-time atmospheric data transmission active',
+                    scientific: 'Sensor array: MEDA (7 instruments) | Data rate: 250 Mbps to Earth | Power: Solar + RTG',
+                    mission: 'Support infrastructure - Enables extended mission operations and data relay',
+                    objective: 'communication'
+                }
+            };
+            
+            const data = landmarkData[landmarkName];
+            if (data) {
+                addLogEntry(`🎯 LANDMARK EXPLORATION: ${data.message}`, 'success');
+                addLogEntry(`📊 SCIENTIFIC ANALYSIS: ${data.scientific}`, 'warning');
+                addLogEntry(`🚀 MISSION STATUS: ${data.mission}`, 'critical');
+                
+                // Complete relevant objectives
+                if (data.objective === 'crater' && !gameState.completedObjectives.includes('crater')) {
+                    completeObjective('obj1', 'crater');
+                    updateMissionProgress(15);
+                } else if (data.objective === 'communication' && !gameState.completedObjectives.includes('communication')) {
+                    completeObjective('obj5', 'communication');
+                    updateMissionProgress(10);
+                }
+                
+                // Visual feedback
+                const landmark = event.target.closest('.landmark');
+                landmark.style.transform = 'scale(1.2)';
+                landmark.style.filter = 'drop-shadow(0 0 20px #ffaa00)';
+                setTimeout(() => {
+                    landmark.style.transform = '';
+                    landmark.style.filter = '';
+                }, 1000);
+            }
+        }
+
+        // Enhanced scientific discovery system
+        function makeDiscovery(discoveryType) {
+            if (gameState.discoveries.includes(discoveryType)) {
+                addLogEntry(`Site already analyzed - ${discoveryType} data archived in mission database`, 'warning');
+                return;
+            }
+            
+            gameState.discoveries.push(discoveryType);
+            gameState.totalDiscoveries++;
+            
+            const discoveryData = {
+                'Organic Compounds': {
+                    message: '🧬 MAJOR BREAKTHROUGH! Complex organic molecules detected in rock sample!',
+                    scientific: 'Compounds identified: Thiophenes, Benzene, Toluene | Concentration: 10-100 ppb',
+                    impact: 'Potential biosignatures discovered - Evidence suggests Mars may have harbored ancient microbial life',
+                    progress: 25
+                },
+                'Water Evidence': {
+                    message: '💧 CRITICAL DISCOVERY! Hydrated mineral formations confirm ancient aqueous environment!',
+                    scientific: 'Minerals: Phyllosilicates, Sulfates, Carbonates | Hydration level: 12-20% by mass',
+                    impact: 'Definitive proof of sustained liquid water activity over geological timescales',
+                    progress: 20
+                },
+                'Rare Minerals': {
+                    message: '💎 UNPRECEDENTED FIND! Unusual crystalline formations with unique composition!',
+                    scientific: 'Crystal structure: Hexagonal lattice | Composition: Iron-titanium oxide with trace organics',
+                    impact: 'Never-before-seen mineral formation provides new insights into Mars geological history',
+                    progress: 15
+                }
+            };
+            
+            const data = discoveryData[discoveryType];
+            if (data) {
+                addLogEntry(data.message, 'critical');
+                addLogEntry(`🔬 DETAILED ANALYSIS: ${data.scientific}`, 'success');
+                addLogEntry(`🌟 SCIENTIFIC IMPACT: ${data.impact}`, 'warning');
+                
+                updateMissionProgress(data.progress);
+                
+                // Update discoveries counter
+                document.getElementById('discoveriesCount').textContent = `${gameState.totalDiscoveries}/3`;
+                
+                // Complete life objective for organic compounds
+                if (discoveryType === 'Organic Compounds') {
+                    completeObjective('obj4', 'life');
+                }
+                
+                // Remove discovery point with dramatic effect
+                const point = event.target;
+                point.style.animation = 'discovery-explosion 1s ease-out';
+                setTimeout(() => {
+                    point.style.display = 'none';
+                }, 1000);
+            }
+        }
+
+        // Enhanced rover controls
+        function moveRover(direction) {
+            moveRoverRealistic(direction);
+            addLogEntry(`Manual navigation command: Moving rover ${direction.toLowerCase()}`, '');
+        }
+
+        // Realistic sample drilling system
+        function drillSample() {
+            if (gameState.samplesCollected >= 5) {
+                addLogEntry('Sample storage compartment at maximum capacity - Laboratory analysis required before additional sampling', 'warning');
+                return;
+            }
+            
+            // Realistic Mars rock and soil samples
+            const marsSamples = [
+                { 
+                    name: 'Olivine-rich Basalt', 
+                    composition: 'Mg₂SiO₄ with Fe²⁺ substitution', 
+                    significance: 'Indicates high-temperature volcanic processes - Early Mars crustal formation',
+                    location: 'Surface exposure'
+                },
+                { 
+                    name: 'Phyllosilicate Clay', 
+                    composition: 'Hydrated aluminum silicate minerals', 
+                    significance: 'Formed through water-rock interaction - Evidence of ancient habitable conditions',
+                    location: 'Subsurface layer 3cm'
+                },
+                { 
+                    name: 'Carbonate Concretion', 
+                    composition: 'CaCO₃ with organic carbon traces', 
+                    significance: 'Precipitation from alkaline water - Potential biosignature preservation medium',
+                    location: 'Sedimentary deposit'
+                },
+                { 
+                    name: 'Sulfate Evaporite', 
+                    composition: 'Hydrated magnesium sulfate (MgSO₄·7H₂O)', 
+                    significance: 'Formed in acidic aqueous environment - Records ancient climate conditions',
+                    location: 'Subsurface layer 5cm'
+                },
+                { 
+                    name: 'Hematite Spherules', 
+                    composition: 'Iron oxide (Fe₂O₃) concretions', 
+                    significance: 'Aqueous formation process - Additional evidence of water activity',
+                    location: 'Surface weathering layer'
+                }
+            ];
+            
+            const sample = marsSamples[gameState.samplesCollected];
+            gameState.samplesCollected++;
+            
+            addLogEntry(`🔧 DRILLING OPERATION: Initiating subsurface penetration sequence`, '');
+            addLogEntry(`🧪 SAMPLE ACQUIRED: ${sample.name} from ${sample.location}`, 'success');
+            addLogEntry(`⚗️ COMPOSITION: ${sample.composition}`, 'warning');
+            addLogEntry(`🔬 SIGNIFICANCE: ${sample.significance}`, 'critical');
+            
+            // Update UI
+            document.getElementById('samplesCount').textContent = `${gameState.samplesCollected}/5`;
+            
+            // Complete objectives
+            if (gameState.samplesCollected === 5) {
+                completeObjective('obj2', 'samples');
+                updateMissionProgress(20);
+                addLogEntry('🎯 SAMPLING MISSION COMPLETE: All geological samples secured - Ready for comprehensive analysis', 'critical');
+                
+                // Disable drill button
+                document.getElementById('drillBtn').disabled = true;
+                document.getElementById('drillBtn').textContent = '🔧 MISSION COMPLETE';
+            }
+        }
+
+        // Enhanced photography system
+        function takePhoto() {
+            const photoMissions = [
+                { 
+                    subject: 'Martian surface morphology panorama', 
+                    scientific: 'High-resolution terrain mapping for geological structure analysis',
+                    technical: 'Mastcam-Z stereo imaging - 1600x1200 pixel resolution'
+                },
+                { 
+                    subject: 'Atmospheric phenomena documentation', 
+                    scientific: 'Dust devil formation and atmospheric opacity measurement',
+                    technical: 'MEDA environmental monitoring correlation with visual data'
+                },
+                { 
+                    subject: 'Rock texture and mineral analysis', 
+                    scientific: 'Grain size distribution and surface weathering pattern study',
+                    technical: 'MAHLI microscopic imaging - 31μm/pixel resolution'
+                },
+                { 
+                    subject: 'Rover operational status verification', 
+                    scientific: 'Equipment functionality and structural integrity assessment',
+                    technical: 'Navigation cameras and engineering telemetry correlation'
+                },
+                { 
+                    subject: 'Horizon and sky color spectrum analysis', 
+                    scientific: 'Atmospheric composition and seasonal variation documentation',
+                    technical: 'MARDI descent imager calibrated color analysis'
+                }
+            ];
+            
+            const photo = photoMissions[Math.floor(Math.random() * photoMissions.length)];
+            
+            addLogEntry(`📸 IMAGE ACQUISITION: ${photo.subject} captured in high resolution`, 'success');
+            addLogEntry(`🔬 SCIENTIFIC PURPOSE: ${photo.scientific}`, 'warning');
+            addLogEntry(`⚙️ TECHNICAL SPECS: ${photo.technical}`, '');
+            addLogEntry(`📡 DATA TRANSMISSION: Image data relayed to Earth via Mars Reconnaissance Orbiter`, 'success');
+            
+            if (!gameState.completedObjectives.includes('imaging')) {
+                completeObjective('obj3', 'imaging');
+                updateMissionProgress(15);
+            }
+        }
+
+        // Mission objective completion system
+        function completeObjective(objId, key) {
+            if (gameState.completedObjectives.includes(key)) return;
+            
+            gameState.completedObjectives.push(key);
+            const objective = document.getElementById(objId);
+            objective.classList.add('completed');
+            objective.textContent = objective.textContent.replace('❌', '✅');
+            
+            addLogEntry(`🎯 MISSION OBJECTIVE ACHIEVED: ${objective.textContent.replace('✅ ', '')}`, 'critical');
+            
+            // Special completion effects
+            objective.style.animation = 'pulse 2s';
+            setTimeout(() => {
+                objective.style.animation = '';
+            }, 2000);
+        }
+
+        // Mission progress tracking with milestones
+        function updateMissionProgress(increase) {
+            const oldProgress = gameState.missionProgress;
+            gameState.missionProgress = Math.min(100, gameState.missionProgress + increase);
+            
+            // Animate progress bar
+            const progressBar = document.getElementById('missionProgress');
+            progressBar.style.width = gameState.missionProgress + '%';
+            document.getElementById('progressText').textContent = gameState.missionProgress + '%';
+            
+            // Mission milestones
+            if (oldProgress < 50 && gameState.missionProgress >= 50) {
+                addLogEntry('🏆 MISSION MILESTONE: 50% completion reached - Halfway to mission success!', 'critical');
+            } else if (oldProgress < 75 && gameState.missionProgress >= 75) {
+                addLogEntry('🌟 MISSION MILESTONE: 75% completion - Final phase of Mars exploration initiated', 'critical');
+            }
+            
+            if (gameState.missionProgress >= 100) {
+                missionComplete();
+            }
+        }
+
+        function missionComplete() {
+            addLogEntry('🏆 MISSION STATUS: COMPLETE SUCCESS! All primary objectives achieved', 'critical');
+            addLogEntry('🌟 ACHIEVEMENT UNLOCKED: Master Mars Explorer', 'critical');
+            addLogEntry('🚀 MISSION IMPACT: Data collected will advance human understanding of Mars for decades', 'critical');
+            
+            document.getElementById('missionStatus').textContent = 'MISSION SUCCESS';
+            document.getElementById('missionStatus').style.background = '#00ff88';
+            document.getElementById('missionStatus').style.animation = 'pulse 2s infinite';
+            
+            // Celebration effects
+            setTimeout(() => {
+                addLogEntry('📡 TRANSMISSION TO EARTH: Mission success confirmed - Awaiting next exploration directives', 'success');
+            }, 2000);
+        }
+
+        // Animate rover wheels during movement
+        function animateRoverWheels() {
+            const wheels = document.querySelectorAll('.wheel');
+            wheels.forEach((wheel, index) => {
+                wheel.style.animation = `wheel-spin 0.3s linear`;
+                setTimeout(() => {
+                    wheel.style.animation = '';
+                }, 300);
+            });
+        }
+
+        // Update Mars coordinates display
+        function updateCoordinates() {
+            const coordsElement = document.getElementById('coordinates');
+            // Simulate realistic coordinate changes based on movement
+            const latChange = gameState.mapOffset.y * 0.00005;
+            const lonChange = gameState.mapOffset.x * 0.00005;
+            
+            const newLat = marsCoordinates.baseLat + latChange;
+            const newLon = marsCoordinates.baseLon + lonChange;
+            
+            coordsElement.textContent = `Lat: ${newLat.toFixed(4)}°N, Lon: ${newLon.toFixed(4)}°E`;
+        }
+
+        // Timeline interaction system
+        function viewTimelineDetail(solId) {
+            const timelineDetails = {
+                'sol4162': 'Current mission day - Active surface exploration in progress with all systems nominal',
+                'sol4161': 'Helicopter flight covered 2.3km reconnaissance mission - New geological targets identified',
+                'sol4160': 'Spectroscopic analysis revealed high concentrations of carbonate minerals in sample',
+                'sol4159': 'Data relay session transmitted 847MB of scientific data to Earth successfully',
+                'sol4158': 'MOXIE produced oxygen at 12g/hour rate - Technology demonstration successful'
+            };
+            
+            addLogEntry(`📋 MISSION LOG: ${timelineDetails[solId]}`, 'warning');
+        }
+
+        // Real-time data simulation
+        function updateWeatherData() {
+            const temperatures = [-67, -84, -71, -59, -73, -88, -65];
+            const pressures = [615, 732, 687, 601, 698, 634, 719];
+            const windSpeeds = [12, 23, 18, 8, 31, 15, 27];
+            const sols = [4162, 4163, 4164, 4165, 4166, 4167, 4168];
+            
+            document.getElementById('temperature').textContent = 
+                temperatures[Math.floor(Math.random() * temperatures.length)] + '°C';
+            document.getElementById('pressure').textContent = 
+                pressures[Math.floor(Math.random() * pressures.length)] + ' Pa';
+            document.getElementById('windSpeed').textContent = 
+                windSpeeds[Math.floor(Math.random() * windSpeeds.length)] + ' m/s';
+            document.getElementById('sol').textContent = 
+                sols[Math.floor(Math.random() * sols.length)];
+        }
+
+        // Add log entries to data stream
+        function addLogEntry(message, type = '') {
+            const dataStream = document.getElementById('dataStream');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            dataStream.appendChild(entry);
+            dataStream.scrollTop = dataStream.scrollHeight;
+            
+            // Keep only last 25 entries for performance
+            if (dataStream.children.length > 25) {
+                dataStream.removeChild(dataStream.firstChild);
+            }
+        }
+
+        // Automated mission events
+        function simulateRealisticMissionEvents() {
+            const events = [
+                'Telemetry signal strength: 89% - Deep Space Network communication nominal',
+                'Battery charge level: 83% - Solar panel efficiency optimal for current season',
+                'Thermal regulation system maintaining optimal component temperatures',
+                'Navigation system GPS lock maintained - Position accuracy ±2 meters',
+                'Scientific instrument calibration completed - All sensors operational',
+                'Dust accumulation sensors report minimal impact on solar panel efficiency',
+                'Data storage utilization: 67% - Automatic compression algorithms active',
+                'Radiation monitoring: Background levels normal for Martian environment',
+                'Sample containment system integrity verified - All seals secure'
+            ];
+            
+            if (Math.random() > 0.3) { // 70% chance
+                const randomEvent = events[Math.floor(Math.random() * events.length)];
+                const types = ['', 'success', 'warning'];
+                const randomType = types[Math.floor(Math.random() * types.length)];
+                
+                addLogEntry(randomEvent, randomType);
+            }
+        }
+
+        // Mission status updates
+        function updateMissionStatus() {
+            const statuses = ['MISSION ACTIVE', 'DATA COLLECTION', 'SAMPLE ANALYSIS', 'COMMUNICATION RELAY'];
+            const statusElement = document.getElementById('missionStatus');
+            
+            if (gameState.missionProgress < 100) {
+                const currentIndex = statuses.indexOf(statusElement.textContent);
+                const nextIndex = (currentIndex + 1) % statuses.length;
+                statusElement.textContent = statuses[nextIndex];
+            }
+        }
+
+        // Atmospheric monitoring simulation
+        function updateAtmosphericConditions() {
+            if (Math.random() > 0.8) { // 20% chance
+                const conditions = [
+                    'Dust devil detected 1.2km northeast - Monitoring atmospheric disturbance',
+                    'Seasonal wind pattern shift observed - Updating navigation algorithms',
+                    'Atmospheric opacity increased 15% - Solar panel efficiency adjusted',
+                    'Temperature fluctuation detected - Thermal protection protocols active',
+                    'Pressure system moving through region - Weather monitoring enhanced'
+                ];
+                
+                const condition = conditions[Math.floor(Math.random() * conditions.length)];
+                addLogEntry(condition, 'warning');
+            }
+        }
+
+        // Initialize systems when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update weather data every 8 seconds
+            setInterval(updateWeatherData, 8000);
+            
+            // Add realistic mission events every 5 seconds
+            setInterval(simulateRealisticMissionEvents, 5000);
+            
+            // Update mission status every 12 seconds
+            setInterval(updateMissionStatus, 12000);
+            
+            // Monitor atmospheric conditions every 15 seconds
+            setInterval(updateAtmosphericConditions, 15000);
+            
+            // Initial system startup logs
+            setTimeout(() => addLogEntry('Mars atmospheric analysis systems initiated', 'success'), 1000);
+            setTimeout(() => addLogEntry('Rover navigation and control systems verified - All green', 'success'), 2000);
+            setTimeout(() => addLogEntry('Deep space communication link established with Earth', 'success'), 3000);
+            setTimeout(() => addLogEntry('Scientific instrument array online - Ready for exploration mission', 'critical'), 4000);
+            
+            // Initialize display
+            updateZoomDisplay();
+            updateCoordinates();
+        });
+
+        // Add CSS animations for enhanced effects
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes wheel-spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            @keyframes discovery-explosion {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(2); opacity: 0.5; }
+                100% { transform: scale(3); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
