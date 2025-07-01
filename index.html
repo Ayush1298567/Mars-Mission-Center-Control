@@ -158,7 +158,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 200;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .rover-body {
@@ -750,7 +750,7 @@
             distanceTraveled: 0,
             missionProgress: 15,
             completedObjectives: [],
-            roverPosition: { x: 0, y: 0 },
+            roverPosition: { x: 50, y: 50 }, // Start in center
             discoveries: [],
             currentZoom: 1,
             mapOffset: { x: 0, y: 0 },
@@ -848,42 +848,54 @@
             }
         }
 
-        // Realistic rover movement with proper zoom handling
+        // Fixed rover movement - rover actually moves across the map
         function moveRoverRealistic(direction) {
+            const rover = document.getElementById('rover');
             const surface = document.getElementById('marsSurface');
-            const moveSpeed = 3; // pixels per movement
+            const moveSpeed = 8; // pixels per movement
             
-            let newX = gameState.mapOffset.x;
-            let newY = gameState.mapOffset.y;
+            // Get current rover position
+            let currentLeft = parseFloat(rover.style.left) || 50;
+            let currentTop = parseFloat(rover.style.top) || 50;
+            
+            let newLeft = currentLeft;
+            let newTop = currentTop;
             
             switch(direction) {
                 case 'NORTH':
-                    newY += moveSpeed;
+                    newTop = Math.max(5, currentTop - (moveSpeed / 5));
                     break;
                 case 'SOUTH':
-                    newY -= moveSpeed;
+                    newTop = Math.min(95, currentTop + (moveSpeed / 5));
                     break;
                 case 'WEST':
-                    newX += moveSpeed;
+                    newLeft = Math.max(5, currentLeft - (moveSpeed / 5));
                     break;
                 case 'EAST':
-                    newX -= moveSpeed;
+                    newLeft = Math.min(95, currentLeft + (moveSpeed / 5));
                     break;
             }
             
-            // Boundary limits for exploration area
-            const maxOffset = 400;
-            newX = Math.max(-maxOffset, Math.min(maxOffset, newX));
-            newY = Math.max(-maxOffset, Math.min(maxOffset, newY));
+            // Move the rover
+            rover.style.left = newLeft + '%';
+            rover.style.top = newTop + '%';
             
-            gameState.mapOffset = { x: newX, y: newY };
-            gameState.distanceTraveled += moveSpeed * 0.002; // Convert to km
-            
-            // Apply transform with current zoom
-            updateMapTransform();
+            // Update rover position in game state
+            gameState.roverPosition = { x: newLeft, y: newTop };
+            gameState.distanceTraveled += 0.01; // Convert to km
             
             // Update UI
             document.getElementById('distanceTraveled').textContent = gameState.distanceTraveled.toFixed(2) + ' km';
+            
+            // Rotate rover to show direction
+            let rotation = 0;
+            switch(direction) {
+                case 'NORTH': rotation = 0; break;
+                case 'EAST': rotation = 90; break;
+                case 'SOUTH': rotation = 180; break;
+                case 'WEST': rotation = 270; break;
+            }
+            rover.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
         }
 
         // Fixed zoom functionality
@@ -1045,6 +1057,7 @@
         // Enhanced rover controls
         function moveRover(direction) {
             moveRoverRealistic(direction);
+            updateCoordinates();
             addLogEntry(`Manual navigation command: Moving rover ${direction.toLowerCase()}`, '');
         }
 
